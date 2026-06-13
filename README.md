@@ -33,3 +33,15 @@
 <img width="210" alt="微信图片_20260613143027_218_50" src="https://github.com/user-attachments/assets/ff5e01b4-37c7-444d-b4ab-39e1b0448869" />
 
 如果遇到任何 Bug，或者有您觉得值得新增的功能（当然，前提是依然保持简洁），请直接在 Issues 中提出，我会认真考虑。
+
+# 应用部分截图
+
+<img width="200" alt="微信图片_20260613171155_220_50" src="https://github.com/user-attachments/assets/eae3c530-0726-4cc3-a7e3-482ca3c087cc" />
+
+<img width="200" alt="微信图片_20260613171156_221_50" src="https://github.com/user-attachments/assets/bb8295a1-5a74-43ac-acd7-f55d6c272188" />
+
+<img width="200" alt="微信图片_20260613171157_222_50" src="https://github.com/user-attachments/assets/fe9120b3-0296-4ab8-8858-71ae122d95f2" />
+
+<img width="200" alt="微信图片_20260613171158_223_50" src="https://github.com/user-attachments/assets/774ddda0-8bf8-4219-b440-f30b23c0f340" />
+
+<img width="200" alt="微信图片_20260613171159_224_50" src="https://github.com/user-attachments/assets/4203534a-98c9-49b0-beb2-fba49995ff16" />
