@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>小宝工具箱</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="js/mqtt.min.js"></script>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <header class="app-header">
+    <button class="nav-back" id="btnBack" onclick="router.back()">‹</button>
+    <h1 class="nav-title" id="pageTitle">小宝工具箱</h1>
+    <div class="nav-right"></div>
+  </header>
+
+  <!-- 页面容器 -->
+  <main class="app-content" id="appContent">
+    <!-- 由 JS 动态渲染 -->
+  </main>
+
+  <!-- 底部导航 -->
+  <nav class="app-tabbar" id="tabbar">
+    <a class="tab-item active" onclick="router.go('home')" data-page="home">🏠<span>首页</span></a>
+    <a class="tab-item" onclick="router.go('ping')" data-page="ping">📡<span>Ping</span></a>
+    <a class="tab-item" onclick="router.go('mqtt')" data-page="mqtt">📨<span>MQTT</span></a>
+    <a class="tab-item" onclick="router.go('more')" data-page="more">📦<span>更多</span></a>
+    <a class="tab-item" onclick="router.go('about')" data-page="about">📋<span>关于</span></a>
+  </nav>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/lib/qrcode.min.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/api-bridge.js"></script>
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/speedtest.js"></script>
+  <script src="js/pages/ping.js"></script>
+  <script src="js/pages/mqtt.js"></script>
+  <script src="js/pages/traceroute.js"></script>
+  <script src="js/pages/timestamp.js"></script>
+  <script src="js/pages/video.js"></script>
+  <script src="js/pages/qrcode.js"></script>
+  <script src="js/pages/ocr.js"></script>
+  <script src="js/pages/compass.js"></script>
+  <script src="js/pages/donate_qr_b64.js"></script>
+  <script src="js/pages/about.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

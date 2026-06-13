@@ -1,0 +1,61 @@
+apply plugin: 'com.android.application'
+
+// 加载 keystore 配置（如果有则启用签名，没有则使用调试签名）
+def keystoreProps = null
+def keystorePropsFile = rootProject.file('app/keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystoreProps = new Properties()
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
+android {
+    namespace 'com.toolkit.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.toolkit.app'
+        minSdk 22
+        targetSdk 34
+        versionCode 2
+        versionName '1.0.1'
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreProps != null) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystoreProps != null) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            // 使用 Android 默认调试证书，无额外配置
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+}

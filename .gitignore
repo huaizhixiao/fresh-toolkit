@@ -1,0 +1,22 @@
+# === Android ===
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+app/build/
+captures
+.externalNativeBuild/
+
+# === 密钥安全 ===
+**/keystore.jks
+**/keystore.properties
+**/*.jks
+**/*.keystore
+
+# === 构建产物 ===
+*.apk
+*.aab
+*.ap_
+*.dex

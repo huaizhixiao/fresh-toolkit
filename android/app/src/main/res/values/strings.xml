@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">小宝工具箱</string>
+    <color name="primary">#1976D2</color>
+    <color name="primaryDark">#1565C0</color>
+    <color name="accent">#FF4081</color>
+</resources>
