@@ -34,6 +34,18 @@
 
 如果遇到任何 Bug，或者有您觉得值得新增的功能（当然，前提是依然保持简洁），请直接在 Issues 中提出，我会认真考虑。
 
+# 微信公众号
+
+最好微信公众号反馈，或者文章下评论反馈，能够即时看到。
+
+有任何建议或者提议可以在微信公众号回应：
+
+<img width="200" alt="微信图片_20260613180139_225_50" src="https://github.com/user-attachments/assets/b49f2b26-a987-4e2a-866b-b6061f4584cc" />
+
+也可以在微信公众号文章链接下评论：
+
+https://mp.weixin.qq.com/s/zK9u3YuPA92WhXvVuX2LMA
+
 # 应用部分截图
 
 <img width="200" alt="微信图片_20260613171155_220_50" src="https://github.com/user-attachments/assets/eae3c530-0726-4cc3-a7e3-482ca3c087cc" />
