@@ -26,10 +26,10 @@
 
 微信扫码：
 
-<img width="200" alt="微信图片_20260613143021_217_50" src="https://github.com/user-attachments/assets/1e465107-2f54-49eb-8f58-2ce48c2fcf75" />
+<img width="200" alt="微信图片_20260613143021_217_50" src="https://github.com/user-attachments/assets/7787afcf-fe9d-45ff-b4fe-5c11dbb8fb78" />
 
 支付宝扫码：
 
-<img width="210" alt="微信图片_20260613143027_218_50" src="https://github.com/user-attachments/assets/bd6f3df4-5430-40e8-a2ea-6090233c73b2" />
+<img width="210" alt="微信图片_20260613143027_218_50" src="https://github.com/user-attachments/assets/ff5e01b4-37c7-444d-b4ab-39e1b0448869" />
 
 如果遇到任何 Bug，或者有您觉得值得新增的功能（当然，前提是依然保持简洁），请直接在 Issues 中提出，我会认真考虑。
