@@ -9,7 +9,7 @@ const router = {
   },
 
   // Tab 页列表（底部导航栏的页面）
-  tabPages: ['home', 'ping', 'mqtt', 'more', 'about'],
+  tabPages: ['home', 'bit', 'mqtt', 'more', 'about'],
 
   go(name) {
     if (name === this.current) return;
@@ -25,7 +25,7 @@ const router = {
     const titles = {
       home: '小宝工具箱', ping: 'Ping', mqtt: 'MQTT客户端',
       traceroute: '路由追踪', timestamp: '时间戳转换', video: '录像计算',
-      qrcode: '二维码生成', ocr: '图片转文字', compass: '指南针',
+      qrcode: '二维码生成', ocr: '图片转文字', compass: '指南针', bit: 'Bit位分析',
       more: '更多工具', about: '关于'
     };
     util.$('pageTitle').textContent = titles[name] || '小宝工具箱';
@@ -58,7 +58,7 @@ const router = {
     this.current = name;
     const titles = {
       traceroute: '路由追踪', timestamp: '时间戳转换', video: '录像计算',
-      qrcode: '二维码生成', ocr: '图片转文字', compass: '指南针'
+      qrcode: '二维码生成', ocr: '图片转文字', compass: '指南针', bit: 'Bit位分析'
     };
     util.$('pageTitle').textContent = titles[name] || name;
     util.$('btnBack').classList.add('show');
