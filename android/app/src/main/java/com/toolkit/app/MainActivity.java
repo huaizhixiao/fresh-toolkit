@@ -11,6 +11,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import android.util.Base64;
+
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -20,7 +22,20 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -166,52 +181,190 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ===== 原生 MQTT 桥接 =====
+    // ===== 原生 MQTT 桥接（支持证书） =====
     public class NativeMQTT {
         private MqttClient mqttClient = null;
         private boolean connected = false;
 
         @JavascriptInterface
-        public String connect(final String host, final int port, final String clientId,
-                              final String username, final String password, final boolean useTLS) {
-            try {
-                disconnectSync();
-                String protocol = useTLS ? "ssl" : "tcp";
-                String serverUri = protocol + "://" + host + ":" + port;
-                MqttConnectOptions opts = new MqttConnectOptions();
-                opts.setCleanSession(true);
-                opts.setConnectionTimeout(10);
-                opts.setKeepAliveInterval(30);
-                opts.setAutomaticReconnect(false);
-                if (username != null && !username.isEmpty()) opts.setUserName(username);
-                if (password != null && !password.isEmpty()) opts.setPassword(password.toCharArray());
-                mqttClient = new MqttClient(serverUri, clientId, new MemoryPersistence());
-                mqttClient.setCallback(new MqttCallback() {
-                    @Override
-                    public void connectionLost(Throwable cause) {
-                        connected = false;
-                        mainHandler.post(() -> webView.evaluateJavascript("window._mqttOnStatus('disconnected')", null));
+        public void connect(final String host, final int port, final String clientId,
+                              final String username, final String password, final boolean useTLS,
+                              final String caCert, final String clientCert, final String clientKey,
+                              final String alpn) {
+            // 后台线程执行，不阻塞 JS 线程
+            new Thread(() -> {
+                try {
+                    disconnectSync();
+                    String protocol = useTLS ? "ssl" : "tcp";
+                    String serverUri = protocol + "://" + host + ":" + port;
+                    MqttConnectOptions opts = new MqttConnectOptions();
+                    opts.setCleanSession(true);
+                    opts.setConnectionTimeout(10);
+                    opts.setKeepAliveInterval(30);
+                    opts.setAutomaticReconnect(false);
+                    if (username != null && !username.isEmpty()) opts.setUserName(username);
+                    if (password != null && !password.isEmpty()) opts.setPassword(password.toCharArray());
+
+                    if (useTLS && caCert != null && !caCert.isEmpty()) {
+                        SSLSocketFactory sf = createSslFactory(caCert, clientCert, clientKey, alpn);
+                        if (sf != null) opts.setSocketFactory(sf);
                     }
-                    @Override
-                    public void messageArrived(String topic, MqttMessage message) {
-                        final String payload = new String(message.getPayload());
-                        final String t = topic;
-                        mainHandler.post(() -> webView.evaluateJavascript(
-                            "window._mqttOnMessage('" + escapeJS(t) + "','" + escapeJS(payload) + "')", null));
+
+                    mqttClient = new MqttClient(serverUri, clientId, new MemoryPersistence());
+                    mqttClient.setCallback(new MqttCallback() {
+                        @Override
+                        public void connectionLost(Throwable cause) {
+                            connected = false;
+                            mainHandler.post(() -> webView.evaluateJavascript(
+                                "window._mqttOnStatus('disconnected')", null));
+                        }
+                        @Override
+                        public void messageArrived(String topic, MqttMessage message) {
+                            final String payload = new String(message.getPayload());
+                            final String t = topic;
+                            mainHandler.post(() -> webView.evaluateJavascript(
+                                "window._mqttOnMessage('" + escapeJS(t) + "','" + escapeJS(payload) + "')", null));
+                        }
+                        @Override
+                        public void deliveryComplete(IMqttDeliveryToken token) {}
+                    });
+                    mqttClient.connect(opts);
+                    connected = true;
+                    mainHandler.post(() -> webView.evaluateJavascript(
+                        "window._mqttOnStatus('connected')", null));
+                } catch (Exception e) {
+                    String msg = "";
+                    if (e instanceof MqttException) {
+                        MqttException me = (MqttException) e;
+                        msg = "MQTT原因码=" + me.getReasonCode();
+                        Throwable cause = me.getCause();
+                        int depth = 0;
+                        while (cause != null && depth < 3) {
+                            String cMsg = cause.getMessage();
+                            if (cMsg != null && !cMsg.isEmpty()) {
+                                msg += " | " + cause.getClass().getSimpleName() + ": " + cMsg;
+                                break;
+                            }
+                            cause = cause.getCause();
+                            depth++;
+                        }
+                    } else {
+                        msg = e.getMessage();
+                        if (msg == null || msg.isEmpty()) msg = e.toString();
                     }
-                    @Override
-                    public void deliveryComplete(IMqttDeliveryToken token) {}
-                });
-                mqttClient.connect(opts);
-                connected = true;
-                mainHandler.post(() -> webView.evaluateJavascript("window._mqttOnStatus('connected')", null));
-                return "OK";
-            } catch (Exception e) {
-                return "FAIL:" + e.getMessage();
-            }
+                    e.printStackTrace();
+                    final String errMsg = msg;
+                    mainHandler.post(() -> webView.evaluateJavascript(
+                        "window._mqttOnConnectError('" + escapeJS(errMsg) + "')", null));
+                }
+            }).start();
         }
 
-        @JavascriptInterface
+        // SSL 工厂：接收 base64 或 PEM 文本，写入临时文件后解析
+        private SSLSocketFactory createSslFactory(String caB64, String certB64, String keyB64, String alpn) throws Exception {
+            java.io.File cacheDir = getCacheDir();
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            trustStore.load(null, null);
+            // 将 base64 或 PEM 文本解码为原始字节
+            byte[] caBytes = decodeCertInput(caB64);
+            byte[] certBytes = decodeCertInput(certB64);
+            byte[] keyBytes = decodeCertInput(keyB64);
+            // CA 证书
+            if (caBytes != null && caBytes.length > 0) {
+                java.io.File tmp = new java.io.File(cacheDir, "mqtt_ca_" + System.currentTimeMillis() + ".pem");
+                try {
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(tmp);
+                    fos.write(caBytes); fos.close();
+                    X509Certificate ca = (X509Certificate) cf.generateCertificate(new java.io.FileInputStream(tmp));
+                    trustStore.setCertificateEntry("ca", ca);
+                } finally { tmp.delete(); }
+            }
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(trustStore);
+            // 客户端证书 + Key
+            KeyManagerFactory kmf = null;
+            if (certBytes != null && certBytes.length > 0) {
+                if (keyBytes == null || keyBytes.length == 0) throw new Exception("有客户端证书但缺少 Key 文件");
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(null, null);
+                java.io.File certTmp = new java.io.File(cacheDir, "mqtt_cert_" + System.currentTimeMillis() + ".pem");
+                Certificate clientCert = null;
+                try {
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(certTmp);
+                    fos.write(certBytes); fos.close();
+                    clientCert = cf.generateCertificate(new java.io.FileInputStream(certTmp));
+                } finally { certTmp.delete(); }
+                PrivateKey privateKey = parseKeyBytes(keyBytes);
+                if (privateKey == null) throw new Exception("无法解析 Key 文件，请确认是 PEM 格式私钥");
+                keyStore.setKeyEntry("client", privateKey, "".toCharArray(), new Certificate[]{clientCert});
+                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(keyStore, "".toCharArray());
+            }
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(kmf != null ? kmf.getKeyManagers() : null, tmf.getTrustManagers(), null);
+            return ctx.getSocketFactory();
+        }
+        // 自动识别 base64 或 PEM 文本，返回原始字节
+        private byte[] decodeCertInput(String input) {
+            if (input == null || input.isEmpty()) return new byte[0];
+            String trimmed = input.trim();
+            // 如果以 PEM 标记开头，直接取 UTF-8 字节（兼容旧数据）
+            if (trimmed.startsWith("-----BEGIN")) {
+                try { return trimmed.getBytes("UTF-8"); } catch (Exception e) { return new byte[0]; }
+            }
+            // 否则当作 base64 解码
+            try { return Base64.decode(trimmed, Base64.DEFAULT); } catch (Exception e) { return new byte[0]; }
+        }
+        // 解析私钥字节（支持 PEM 文本和裸 DER）
+        private PrivateKey parseKeyBytes(byte[] data) {
+            try {
+                String pem = new String(data, "UTF-8");
+                // 如果是 PEM 格式，提取 base64 体并解码为 DER
+                if (pem.contains("-----BEGIN")) {
+                    String raw = pem
+                        .replace("-----BEGIN PRIVATE KEY-----", "")
+                        .replace("-----END PRIVATE KEY-----", "")
+                        .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                        .replace("-----END RSA PRIVATE KEY-----", "")
+                        .replace("-----BEGIN EC PRIVATE KEY-----", "")
+                        .replace("-----END EC PRIVATE KEY-----", "")
+                        .replaceAll("\\s", "");
+                    data = Base64.decode(raw, Base64.DEFAULT);
+                }
+            } catch (Exception ignored) {}
+            // 尝试 PKCS#8
+            try {
+                PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
+                try { return KeyFactory.getInstance("RSA").generatePrivate(spec); } catch (Exception e) {}
+                try { return KeyFactory.getInstance("EC").generatePrivate(spec); } catch (Exception e) {}
+                try { return KeyFactory.getInstance("DSA").generatePrivate(spec); } catch (Exception e) {}
+            } catch (Exception ignored) {}
+            // 尝试 PKCS#1 -> 手动构建 PKCS#8 包裹
+            try {
+                byte[] algId = hexToBytes("300D06092A864886F70D0101010500");
+                byte[] wrapped = new byte[algId.length + 4 + data.length];
+                System.arraycopy(algId, 0, wrapped, 0, algId.length);
+                wrapped[algId.length] = 0x04; wrapped[algId.length + 1] = (byte)0x82;
+                wrapped[algId.length + 2] = (byte)((data.length >> 8) & 0xFF);
+                wrapped[algId.length + 3] = (byte)(data.length & 0xFF);
+                System.arraycopy(data, 0, wrapped, algId.length + 4, data.length);
+                int total = wrapped.length + 3;
+                byte[] pkcs8 = new byte[total + 4];
+                pkcs8[0] = 0x30; pkcs8[1] = (byte)0x82;
+                pkcs8[2] = (byte)((total >> 8) & 0xFF); pkcs8[3] = (byte)(total & 0xFF);
+                pkcs8[4] = 0x02; pkcs8[5] = 0x01; pkcs8[6] = 0x00;
+                System.arraycopy(wrapped, 0, pkcs8, 7, wrapped.length);
+                return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(pkcs8));
+            } catch (Exception e) { return null; }
+        }
+        private byte[] hexToBytes(String hex) {
+            int len = hex.length(); byte[] data = new byte[len / 2];
+            for (int i = 0; i < len; i += 2)
+                data[i / 2] = (byte)((Character.digit(hex.charAt(i), 16) << 4) + Character.digit(hex.charAt(i + 1), 16));
+            return data;
+        }
+
         public void disconnect() { disconnectSync(); }
 
         private void disconnectSync() {

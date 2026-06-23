@@ -144,14 +144,17 @@ router.register('mqtt', (container) => {
 
     if (isNative) {
       if (!state.nativeOk) { showToast('原生MQTT不可用'); return; }
-      try {
-        const result = NativeMQTT.connect(
-          c.host, c.port, c.clientId || 'toolkit_' + Date.now().toString(36),
-          c.username || '', c.password || '',
-          c.protocol === 'mqtts://'
-        );
-        if (!result.startsWith('OK')) showToast('连接失败: ' + result);
-      } catch(e) { showToast('连接异常: ' + e.message); }
+      showToast('正在连接...');
+      state.connected = false;
+      render();
+      // 异步连接，结果由回调处理
+      NativeMQTT.connect(
+        c.host, c.port, c.clientId || 'toolkit_' + Date.now().toString(36),
+        c.username || '', c.password || '',
+        c.protocol === 'mqtts://',
+        (c.certType === 'self' ? (c.caCert || '') : ''), c.clientCert || '', c.clientKey || '',
+        c.alpn || ''
+      );
     } else {
       // WebSocket mqtt.js
       if (typeof mqtt === 'undefined') { showToast('mqtt.js 未加载'); return; }
@@ -338,13 +341,18 @@ router.register('mqtt', (container) => {
     const editC = editIdx !== undefined ? state.clients[editIdx] : null;
     const p = editC ? (PROTOCOLS.find(x => x.value === editC.protocol) || PROTOCOLS[3]) : PROTOCOLS[3];
     const isNative = p.value === 'mqtt://' || p.value === 'mqtts://';
+    const isTLS = p.value === 'mqtts://' || p.value === 'wss://';
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.innerHTML = `
       <div class="modal-content" style="max-height:90vh;overflow-y:auto;">
         <div class="modal-title">${editIdx !== undefined ? '编辑' : '新建'}客户端</div>
         <div class="input-group"><label class="input-label">名称</label><input class="input-field" id="newName" value="${editC?.name||''}"></div>
-        <div class="input-group"><label class="input-label">协议</label><select id="newProtocol" style="width:100%;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 12px;font-size:14px;" onchange="var pg=document.getElementById('pathGroup');pg&&(pg.style.display=(this.value==='ws://'||this.value==='wss://')?'':'none')">
+        <div class="input-group"><label class="input-label">协议</label><select id="newProtocol" style="width:100%;height:44px;border:1px solid #ddd;border-radius:10px;padding:0 12px;font-size:14px;"
+          onchange="
+            var pg=document.getElementById('pathGroup');pg&&(pg.style.display=(this.value==='ws://'||this.value==='wss://')?'':'none');
+            var cg=document.getElementById('certGroup');cg&&(cg.style.display=(this.value==='mqtts://')?'':'none');
+          ">
           ${PROTOCOLS.map(x => `<option value="${x.value}" ${x.value===p.value?'selected':''}>${x.label} - ${x.desc}</option>`).join('')}
         </select></div>
         <div class="input-row" style="gap:8px;"><div style="flex:3;"><label class="input-label">主机</label><input class="input-field" id="newHost" value="${editC?.host||'broker.emqx.io'}"></div><div style="flex:1;"><label class="input-label">端口</label><input class="input-field" id="newPort" value="${editC?.port||'1883'}" type="number"></div></div>
@@ -352,6 +360,72 @@ router.register('mqtt', (container) => {
         <div class="input-group"><label class="input-label">客户端ID</label><input class="input-field" id="newCid" value="${editC?.clientId||''}" placeholder="留空自动生成"></div>
         <div class="input-group"><label class="input-label">用户名</label><input class="input-field" id="newUser" value="${editC?.username||''}"></div>
         <div class="input-group"><label class="input-label">密码</label><input class="input-field" id="newPass" type="password" value="${editC?.password||''}"></div>
+
+        <!-- 证书配置（仅 mqtts:// 协议显示） -->
+        <div id="certGroup" style="display:${p.value === 'mqtts://' ? '' : 'none'};margin-top:12px;padding:12px;background:#f7f8fc;border-radius:10px;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:10px;">🔒 SSL/TLS 证书配置</div>
+
+          <!-- 证书类型 -->
+          <div style="margin-bottom:10px;">
+            <label class="input-label">证书类型</label>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border-radius:6px;background:${(editC?.certType||'self')==='ca_signed'?'#e8f5e9':'transparent'};">
+                <input type="radio" name="certType" value="ca_signed" ${(editC?.certType||'self')==='ca_signed'?'checked':''} style="accent-color:var(--primary);"
+                  onchange="document.getElementById('caCertRow').style.display='none';document.getElementById('clientCertRow').style.display='none';document.getElementById('clientKeyRow').style.display='none';">
+                <span style="font-weight:${(editC?.certType||'self')==='ca_signed'?'600':'400'};">CA signed server certificate</span>
+                <span style="font-size:11px;color:#999;">（服务端证书由公共CA签发，需配置客户端证书）</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border-radius:6px;background:${(editC?.certType||'self')==='self'?'#e8f5e9':'transparent'};">
+                <input type="radio" name="certType" value="self" ${(editC?.certType||'self')==='self'?'checked':''} style="accent-color:var(--primary);"
+                  onchange="document.getElementById('caCertRow').style.display='';document.getElementById('clientCertRow').style.display='';document.getElementById('clientKeyRow').style.display='';">
+                <span style="font-weight:${(editC?.certType||'self')==='self'?'600':'400'};">Self-signed certificate</span>
+                <span style="font-size:11px;color:#999;">（服务端使用自签名证书，需上传CA证书）</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="caCertRow" style="display:${(editC?.certType||'self')==='ca_signed'?'none':''};">
+            <div class="input-group">
+              <label class="input-label">CA 证书文件</label>
+              <div style="display:flex;gap:6px;">
+                <input class="input-field" id="newCaCert" type="text" placeholder="粘贴 PEM 内容或点击 📂 选择文件" value="${editC?.caCert||''}" style="flex:1;font-size:12px;font-family:monospace;">
+                <button class="btn btn-small btn-outline" onclick="window._pickCertFile('newCaCert')" style="flex-shrink:0;">📂</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="clientCertRow" style="display:${(editC?.certType||'self')==='ca_signed'?'none':''};">
+            <div class="input-group">
+              <label class="input-label">客户端证书</label>
+              <div style="display:flex;gap:6px;">
+                <input class="input-field" id="newClientCert" type="text" placeholder="粘贴 PEM 内容或点击 📂 选择文件" value="${editC?.clientCert||''}" style="flex:1;font-size:12px;font-family:monospace;">
+                <button class="btn btn-small btn-outline" onclick="window._pickCertFile('newClientCert')" style="flex-shrink:0;">📂</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="clientKeyRow" style="display:${(editC?.certType||'self')==='ca_signed'?'none':''};">
+            <div class="input-group">
+              <label class="input-label">客户端 Key 文件</label>
+              <div style="display:flex;gap:6px;">
+                <input class="input-field" id="newClientKey" type="text" placeholder="粘贴 PEM 内容或点击 📂 选择文件" value="${editC?.clientKey||''}" style="flex:1;font-size:12px;font-family:monospace;">
+                <button class="btn btn-small btn-outline" onclick="window._pickCertFile('newClientKey')" style="flex-shrink:0;">📂</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ALPN -->
+          <div class="input-group" style="margin-top:8px;">
+            <label class="input-label">ALPN</label>
+            <input class="input-field" id="newAlpn" type="text" placeholder="例如: mqtt" value="${editC?.alpn||''}" style="font-size:13px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">应用层协议协商，MQTT 通常设为 "mqtt"</div>
+          </div>
+
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;">
+            💡 支持 PEM 格式（.pem / .crt / .key），可直接粘贴文本或点击 📂 选择文件
+          </div>
+        </div>
+
         <div class="modal-buttons">
           <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">取消</button>
           <button class="btn btn-primary" onclick="window._saveClient(${editIdx !== undefined ? editIdx : -1})">${editIdx !== undefined ? '保存修改' : '添加'}</button>
@@ -359,6 +433,47 @@ router.register('mqtt', (container) => {
       </div>`;
     document.body.appendChild(overlay);
   };
+
+  // 选择证书文件 - 保存 base64 内容，显示文件名
+  window._pickCertFile = (inputId) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '*/*';
+    input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(input);
+    input.onchange = () => {
+      document.body.removeChild(input);
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // 用 base64 编码文件内容，避免文本编码问题
+        const base64 = e.target.result.split(',')[1];
+        const target = util.$(inputId);
+        if (target) {
+          target.value = '📄 ' + file.name + '（已选择）';
+          target.dataset.base64 = base64;
+          target.dataset.filename = file.name;
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  // 获取证书文件内容（从 input 的 dataset 或 value 中读取）
+  function getCertData(inputId) {
+    const el = util.$(inputId);
+    if (!el) return '';
+    // 新选择的文件（dataset 中有 base64）
+    if (el.dataset.base64) return el.dataset.base64;
+    // 旧数据兼容：如果输入框有内容且不是纯文件名格式，直接返回
+    const val = el.value;
+    if (val && !val.startsWith('📄') && !val.startsWith('（已选择）')) {
+      return val;
+    }
+    return '';
+  }
 
   window._editClient = () => { if (state.clients[state.currentIdx]) window._showAddClient(state.currentIdx); };
 
@@ -369,12 +484,23 @@ router.register('mqtt', (container) => {
     const port = util.$('newPort')?.value?.trim();
     if (!name || !host || !port) { showToast('请填写名称、地址和端口'); return; }
     const isNative = protocol === 'mqtt://' || protocol === 'mqtts://';
+    // 获取选中的证书类型
+    const certTypeRadio = document.querySelector('input[name="certType"]:checked');
+    const getDisplayName = (id) => { const el = util.$(id); return (el && el.dataset.filename) ? el.dataset.filename : ''; };
     const data = {
       id: Date.now(), name, protocol, host, port: parseInt(port),
       path: isNative ? '' : (util.$('newPath')?.value?.trim() || '/mqtt'),
       clientId: util.$('newCid')?.value?.trim() || 'toolkit_' + Date.now().toString(36),
       username: util.$('newUser')?.value?.trim() || '',
       password: util.$('newPass')?.value || '',
+      certType: certTypeRadio ? certTypeRadio.value : 'self',
+      caCert: getCertData('newCaCert'),
+      caCertName: getDisplayName('newCaCert'),
+      clientCert: getCertData('newClientCert'),
+      clientCertName: getDisplayName('newClientCert'),
+      clientKey: getCertData('newClientKey'),
+      clientKeyName: getDisplayName('newClientKey'),
+      alpn: util.$('newAlpn')?.value?.trim() || '',
       subscriptions: editIdx >= 0 ? (state.clients[editIdx]?.subscriptions || []) : []
     };
     if (editIdx >= 0) { state.clients[editIdx] = { ...state.clients[editIdx], ...data }; }
@@ -404,6 +530,12 @@ router.register('mqtt', (container) => {
     } else {
       state.connected = false; render();
     }
+  };
+  // 异步连接失败回调（从 Java 后台线程返回）
+  window._mqttOnConnectError = (msg) => {
+    state.connected = false;
+    showToast('连接失败: ' + msg);
+    render();
   };
   window._mqttOnMessage = (topic, content) => { onMessage(topic, content); };
 
