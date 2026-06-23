@@ -525,6 +525,18 @@ public class MainActivity extends Activity {
             saveBitmapFromBase64(base64Data, "QR_" + System.currentTimeMillis() + ".png");
         }
 
+        @JavascriptInterface
+        public void openUrl(final String url) {
+            if (url == null || url.isEmpty()) return;
+            mainHandler.post(() -> {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (Exception e) {}
+            });
+        }
+
         private void saveBitmapFromBase64(final String base64Data, final String filename) {
             new Thread(() -> {
                 try {

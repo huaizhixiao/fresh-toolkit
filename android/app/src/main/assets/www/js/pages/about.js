@@ -127,7 +127,15 @@ router.register('about', (container) => {
     const dlBtn = util.$('btnDownloadUpdate');
     if (dlBtn) dlBtn.onclick = () => {
       if (state.updateInfo && state.updateInfo.url) {
-        window.open(state.updateInfo.url, '_blank');
+        try {
+          if (typeof NativeGallery !== 'undefined' && NativeGallery.openUrl) {
+            NativeGallery.openUrl(state.updateInfo.url);
+          } else {
+            window.location.href = state.updateInfo.url;
+          }
+        } catch(e) {
+          window.location.href = state.updateInfo.url;
+        }
       }
     };
     // 保存收款码到相册
