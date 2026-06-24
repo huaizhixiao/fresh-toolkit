@@ -1,6 +1,6 @@
 // ========== 关于 & 打赏 & 更新 ==========
 // 当前版本号（每次更新时修改）
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.4';
 const APP_VERSION_CODE = 2;
 
 // === 🔧 配置更新源（二选一） ===

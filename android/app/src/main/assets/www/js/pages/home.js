@@ -32,7 +32,7 @@ router.register('home', (container) => {
       </div>
     </div>
     <div style="text-align:center;padding:20px;color:#ccc;font-size:12px;">
-      小宝工具箱 v1.0.1 · Android版<br>
+      小宝工具箱 v1.0.4 · Android版<br>
       <span style="cursor:pointer;color:#07c160;font-size:12px;" onclick="router.push('about')">📋 关于 & 打赏</span>
     </div>
   `;
@@ -79,7 +79,7 @@ router.register('more', (container) => {
       </div>
 
       <div style="text-align:center;padding:16px;color:#ccc;font-size:12px;">
-        小宝工具箱 v1.0.1 · Android版
+        小宝工具箱 v1.0.4 · Android版
       </div>
     </div>
   `;
