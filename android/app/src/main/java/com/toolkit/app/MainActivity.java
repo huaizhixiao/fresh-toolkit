@@ -47,6 +47,12 @@ import android.provider.MediaStore;
 import android.util.Base64;
 
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -93,6 +99,7 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new NativeMQTT(), "NativeMQTT");
         webView.addJavascriptInterface(new NativeTraceroute(), "NativeTraceroute");
         webView.addJavascriptInterface(new NativeGallery(), "NativeGallery");
+        webView.addJavascriptInterface(new NativeScanner(), "NativeScanner");
 
         webView.loadUrl("file:///android_asset/www/index.html");
     }
@@ -398,9 +405,9 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface
         public boolean isConnected() { return connected && mqttClient != null && mqttClient.isConnected(); }
-        private String escapeJS(String s) {
-            return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r");
-        }
+    }
+    private String escapeJS(String s) {
+        return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r");
     }
 
     // ===== 原生路由追踪 =====
@@ -590,5 +597,183 @@ public class MainActivity extends Activity {
                         "window._galleryCallback && window._galleryCallback(false)", null));
             }
         }
+    }
+
+public class NativeScanner {
+        private volatile boolean scanning = false;
+        private int totalTargets = 0;
+        private int scannedCount = 0;
+        private int aliveCount = 0;
+        private java.util.concurrent.ExecutorService threadPool = null;
+
+        private int[] parsePorts(String portsStr) {
+            if (portsStr == null || portsStr.trim().isEmpty()) return null;
+            java.util.ArrayList<Integer> portList = new java.util.ArrayList<>();
+            String[] parts = portsStr.split(",");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                if (part.contains("-")) {
+                    String[] range = part.split("-");
+                    try {
+                        int start = Integer.parseInt(range[0].trim());
+                        int end = Integer.parseInt(range[1].trim());
+                        if (start > end) { int t = start; start = end; end = t; }
+                        if (end > 65535) end = 65535;
+                        for (int p = start; p <= end; p++) portList.add(p);
+                    } catch (Exception ignored) {}
+                } else {
+                    try { portList.add(Integer.parseInt(part)); } catch (Exception ignored) {}
+                }
+            }
+            if (portList.isEmpty()) return null;
+            int[] result = new int[portList.size()];
+            for (int i = 0; i < portList.size(); i++) result[i] = portList.get(i);
+            return result;
+        }
+
+        private String getMacFromArp(String targetIp) {
+            try {
+                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("/proc/net/arp"));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] parts = line.trim().split("\\s+");
+                    if (parts.length >= 4 && parts[0].equals(targetIp)) {
+                        String mac = parts[3];
+                        if (!mac.equals("00:00:00:00:00:00")) return mac.toUpperCase();
+                    }
+                }
+                br.close();
+            } catch (Exception ignored) {}
+            return "";
+        }
+
+        private String identifyDevice(String mac) {
+            if (mac == null || mac.isEmpty()) return "";
+            String oui = mac.replace(":", "").substring(0, 6).toUpperCase();
+            if (oui.startsWith("00:") || oui.equals("000000")) return "";
+            if (oui.equals("0050B6") || oui.equals("00037F")) return "Cisco";
+            if (oui.startsWith("FC:FB") || oui.startsWith("F8:1D")) return "TP-Link";
+            if (oui.startsWith("8C:DE") || oui.startsWith("18:FE")) return "Xiaomi";
+            if (oui.startsWith("48:22") || oui.startsWith("5C:02")) return "Huawei";
+            if (oui.startsWith("34:95") || oui.startsWith("14:14")) return "Xiaomi";
+            if (oui.startsWith("4C:AA")) return "Huawei";
+            if (oui.startsWith("A4:C1") || oui.startsWith("E0:E2")) return "Hikvision";
+            if (oui.startsWith("00:1B") || oui.startsWith("AC:84")) return "D-Link";
+            if (oui.startsWith("C0:4A")) return "ASUS";
+            if (oui.startsWith("B0:75")) return "ZTE";
+            if (oui.startsWith("CC:2D")) return "H3C";
+            if (oui.startsWith("D4:61")) return "Intel";
+            if (oui.startsWith("B8:27") || oui.startsWith("DC:A6")) return "Raspberry Pi";
+            if (oui.startsWith("AA:AA")) return "";
+            return "OUI:" + oui;
+        }
+
+        private String fetchHttpTitle(String ip, int port) {
+            try {
+                Socket sock = new Socket();
+                sock.connect(new InetSocketAddress(ip, port), 80);
+                sock.setSoTimeout(80);
+                java.io.OutputStream out = sock.getOutputStream();
+                java.io.BufferedReader in = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(sock.getInputStream()));
+                out.write(("GET / HTTP/1.0\\r\\nHost: " + ip + "\\r\\nConnection: close\\r\\n\\r\\n").getBytes());
+                out.flush();
+                String line;
+                while ((line = in.readLine()) != null) {
+                    if (line.contains("<title>") || line.contains("<TITLE>")) {
+                        String title = line.replaceAll("(?i)<\\/?title>", "").trim();
+                        if (title.length() > 50) title = title.substring(0, 50) + "...";
+                        sock.close();
+                        return title;
+                    }
+                }
+                sock.close();
+            } catch (Exception ignored) {}
+            return "";
+        }
+
+        private boolean isHostAlive(String ip) {
+            int[] probePorts = {80, 443, 22, 8080, 3389, 21, 23, 8443, 9090};
+            for (int port : probePorts) {
+                try {
+                    Socket sock = new Socket();
+                    sock.connect(new InetSocketAddress(ip, port), 80);
+                    sock.close();
+                    return true;
+                } catch (Exception ignored) {}
+            }
+            return false;
+        }
+
+        @JavascriptInterface
+        public void startScan(final String ipPrefix, final int startIp, final int endIp, final String portsStr) {
+            if (scanning) return;
+            mainHandler.post(() -> webView.evaluateJavascript("window._scanStart()", null));
+            scanning = true;
+            scannedCount = 0;
+            aliveCount = 0;
+            totalTargets = endIp - startIp + 1;
+            final int[] ports = parsePorts(portsStr);
+            final boolean doPortScan = (ports != null && ports.length > 0);
+            threadPool = java.util.concurrent.Executors.newFixedThreadPool(20);
+            for (int ip = startIp; ip <= endIp && scanning; ip++) {
+                final String targetIp = ipPrefix + "." + ip;
+                final int currentIp = ip;
+                threadPool.submit(() -> {
+                    try {
+                        InetAddress addr = InetAddress.getByName(targetIp);
+                        StringBuilder openPorts = new StringBuilder();
+                        boolean alive = false;
+                        // Ping 判断在线
+                        try { alive = addr.isReachable(80); } catch (Exception ignored) {}
+
+                        if (alive && doPortScan && scanning) {
+                            // 在线 + 有端口列表 → 扫端口
+                            for (int port : ports) {
+                                if (!scanning) break;
+                                try {
+                                    Socket sock = new Socket();
+                                    sock.connect(new InetSocketAddress(targetIp, port), 80);
+                                    sock.close();
+                                    if (openPorts.length() > 0) openPorts.append(",");
+                                    openPorts.append(port);
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                        if (alive && scanning) {
+                            aliveCount++;
+                            final String fPorts = openPorts.toString();
+                            mainHandler.post(() -> webView.evaluateJavascript(
+                                "window._scanResult(" + currentIp + ",'" + escapeJS(fPorts) + "')", null));
+                        }
+                    } catch (Exception e) {
+                        final String err = e.getMessage() != null ? e.getMessage() : e.toString();
+                        mainHandler.post(() -> webView.evaluateJavascript(
+                            "window._scanDebug('" + escapeJS(err) + "')", null));
+                    }
+                    scannedCount++;
+                    int pct = Math.max(1, (scannedCount * 100) / totalTargets);
+                    if (pct > 99) pct = 99;
+                    final int fpct = pct;
+                    mainHandler.post(() -> webView.evaluateJavascript(
+                        "window._scanProgress(" + fpct + ")", null));
+                });
+            }
+            new Thread(() -> {
+                try { threadPool.shutdown(); threadPool.awaitTermination(5, java.util.concurrent.TimeUnit.MINUTES); } catch (Exception ignored) {}
+                scanning = false;
+                mainHandler.post(() -> webView.evaluateJavascript("window._scanComplete()", null));
+            }).start();
+        }
+
+        @JavascriptInterface
+        public void stopScan() {
+            scanning = false;
+            if (threadPool != null) { threadPool.shutdownNow(); threadPool = null; }
+        }
+
+        @JavascriptInterface
+        public boolean isScanning() { return scanning; }
     }
 }

@@ -15,6 +15,7 @@ router.register('home', (container) => {
           ['bit', '🔬', '线性-gradient(135deg,#a8e063,#56ab2f)', 'Bit位分析'],
           ['ping', '📡', '线性-gradient(135deg,#4facfe,#00f2fe)', 'Ping'],
           ['mqtt', '📨', '线性-gradient(135deg,#43e97b,#38f9d7)', 'MQTT'],
+          ['scan', '🌐', '线性-gradient(135deg,#1a1a2e,#16213e)', '局域网扫描'],
           ['timestamp', '⏰', '线性-gradient(135deg,#a18cd1,#fbc2eb)', '时间戳'],
           ['video', '🎬', '线性-gradient(135deg,#fccb90,#d57eeb)', '录像计算'],
           ['speedtest', '🚀', '线性-gradient(135deg,#667eea,#764ba2)', '测速'],
@@ -44,13 +45,17 @@ router.register('more', (container) => {
       <h3 style="font-size:16px;font-weight:600;margin-bottom:10px;">📦 更多工具</h3>
       <div class="tool-grid">
         ${[
-          ['traceroute', '🗺️', '线性-gradient(135deg,#fa709a,#fee140)', '路由追踪'],
+          ['bit', '🔬', '线性-gradient(135deg,#a8e063,#56ab2f)', 'Bit位分析'],
+          ['ping', '📡', '线性-gradient(135deg,#4facfe,#00f2fe)', 'Ping'],
+          ['mqtt', '📨', '线性-gradient(135deg,#43e97b,#38f9d7)', 'MQTT'],
+          ['scan', '🌐', '线性-gradient(135deg,#1a1a2e,#16213e)', '局域网扫描'],
           ['timestamp', '⏰', '线性-gradient(135deg,#a18cd1,#fbc2eb)', '时间戳'],
           ['video', '🎬', '线性-gradient(135deg,#fccb90,#d57eeb)', '录像计算'],
+          ['speedtest', '🚀', '线性-gradient(135deg,#667eea,#764ba2)', '测速'],
+          ['traceroute', '🗺️', '线性-gradient(135deg,#fa709a,#fee140)', '路由追踪'],
           ['qrcode', '📱', '线性-gradient(135deg,#5ee7df,#b490ca)', '二维码'],
           ['ocr', '📷', '线性-gradient(135deg,#c471f5,#fa71cd)', '图片转文字'],
-          ['compass', '🧭', '线性-gradient(135deg,#ffecd2,#fcb69f)', '指南针'],
-          ['bit', '🔬', '线性-gradient(135deg,#a8e063,#56ab2f)', 'Bit位分析']
+          ['compass', '🧭', '线性-gradient(135deg,#ffecd2,#fcb69f)', '指南针']
         ].map(([page, icon, grad, name]) =>
           `<div class="tool-item" onclick="router.push('${page}')">
             <div class="tool-icon" style="background:${grad}">${icon}</div>
