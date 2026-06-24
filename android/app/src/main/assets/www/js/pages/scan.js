@@ -21,18 +21,18 @@ router.register('scan', (container) => {
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">扫描网段内的活跃设备，留空端口可快速发现 IP</div>
 
         <!-- IP 段输入 -->
-        <div class="input-row" style="gap:6px;margin-bottom:8px;">
-          <div style="flex:2;">
+        <div class="input-row" style="gap:4px;margin-bottom:8px;align-items:end;">
+          <div style="flex:1;min-width:0;">
             <label class="input-label">IP 段</label>
-            <input class="input-field" id="scanIpPrefix" value="${state.ipPrefix}" style="font-family:monospace;">
+            <input class="input-field" id="scanIpPrefix" value="${state.ipPrefix}" style="font-family:monospace;font-size:13px;width:100%;box-sizing:border-box;">
           </div>
-          <div style="flex:0 0 50px;">
+          <div style="flex:0 0 66px;">
             <label class="input-label">起始</label>
-            <input class="input-field" id="scanStartIp" value="${state.startIp}" type="number" min="1" max="254" style="text-align:center;">
+            <input class="input-field" id="scanStartIp" value="${state.startIp}" type="number" min="1" max="254" style="text-align:center;font-family:monospace;width:100%;box-sizing:border-box;">
           </div>
-          <div style="flex:0 0 50px;">
+          <div style="flex:0 0 66px;">
             <label class="input-label">结束</label>
-            <input class="input-field" id="scanEndIp" value="${state.endIp}" type="number" min="1" max="254" style="text-align:center;">
+            <input class="input-field" id="scanEndIp" value="${state.endIp}" type="number" min="1" max="254" style="text-align:center;font-family:monospace;width:100%;box-sizing:border-box;">
           </div>
         </div>
 
@@ -43,7 +43,7 @@ router.register('scan', (container) => {
 
         <!-- 控制按钮 -->
         <div class="btn-row" style="margin-bottom:10px;">
-          <button class="btn btn-primary" id="btnScanStart" style="flex:1;${state.scanning?'display:none':''}">🔍 ${state.ports.trim() ? '扫描端口' : '快速发现'}</button>
+          <button class="btn btn-primary" id="btnScanStart" style="flex:1;${state.scanning?'display:none':''}">🔍 开始扫描</button>
           <button class="btn btn-danger" id="btnScanStop" style="flex:1;${state.scanning?'':'display:none'}">⏹ 停止</button>
         </div>
 
