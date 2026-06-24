@@ -44,6 +44,8 @@
 
 也可以在微信公众号文章链接下评论：
 
+https://mp.weixin.qq.com/s/SYml9barH83IKLfzRCHv1w
+
 https://mp.weixin.qq.com/s/zK9u3YuPA92WhXvVuX2LMA
 
 # 应用部分截图
