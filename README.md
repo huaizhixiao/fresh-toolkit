@@ -48,12 +48,18 @@ https://mp.weixin.qq.com/s/zK9u3YuPA92WhXvVuX2LMA
 
 # 应用部分截图
 
-<img width="200" alt="微信图片_20260613171155_220_50" src="https://github.com/user-attachments/assets/eae3c530-0726-4cc3-a7e3-482ca3c087cc" />
+<img width="200" alt="微信图片_20260624114309_246_50" src="https://github.com/user-attachments/assets/b2cbed3c-0e3e-4feb-9e35-3ec50da46bc4" />
 
-<img width="200" alt="微信图片_20260613171156_221_50" src="https://github.com/user-attachments/assets/bb8295a1-5a74-43ac-acd7-f55d6c272188" />
+<img width="200" alt="微信图片_20260624114308_245_50" src="https://github.com/user-attachments/assets/5d0f64e0-b5aa-47eb-aad1-6fad5c10cce6" />
 
-<img width="200" alt="微信图片_20260613171157_222_50" src="https://github.com/user-attachments/assets/fe9120b3-0296-4ab8-8858-71ae122d95f2" />
+<img width="200" alt="微信图片_20260624114307_244_50" src="https://github.com/user-attachments/assets/2f19acb6-bc3a-4c77-b555-3178c7a5b9bf" />
 
-<img width="200" alt="微信图片_20260613171158_223_50" src="https://github.com/user-attachments/assets/774ddda0-8bf8-4219-b440-f30b23c0f340" />
+<img width="200" alt="微信图片_20260624114306_243_50" src="https://github.com/user-attachments/assets/177a995a-c73e-42d0-8298-c7dcb184477f" />
+
+<img width="200" alt="微信图片_20260624114305_242_50" src="https://github.com/user-attachments/assets/1cc50134-8fc5-4312-b701-da82ed2fb225" />
+
+<img width="200" alt="微信图片_20260624114305_241_50" src="https://github.com/user-attachments/assets/c4e4b44d-865d-4100-b1cd-5ab6cfb80e6c" />
+
+<img width="200" alt="微信图片_20260624114304_240_50" src="https://github.com/user-attachments/assets/c300c135-a61d-40eb-85a6-e5c8f7f8a523" />
 
 <img width="200" alt="微信图片_20260613171159_224_50" src="https://github.com/user-attachments/assets/4203534a-98c9-49b0-beb2-fba49995ff16" />
