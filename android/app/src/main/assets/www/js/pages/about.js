@@ -1,6 +1,6 @@
 // ========== 关于 & 打赏 & 更新 ==========
 // 当前版本号（每次更新时修改）
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.5';
 const APP_VERSION_CODE = 2;
 
 // === 🔧 配置更新源（二选一） ===
@@ -35,6 +35,28 @@ router.register('about', (container) => {
           <div style="font-size:12px;color:var(--text-muted);">一站式实用工具集合</div>
           <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
             <button class="btn btn-small btn-primary" id="btnCheckUpdate">🔄 检查更新</button>
+          </div>
+        </div>
+
+        <!-- 关于作者 -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">👤</div>
+            <div style="flex:1;">
+              <div style="font-size:16px;font-weight:600;color:var(--text);">怀志</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">小宝工具箱 · 作者</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:12px;">
+            免费开源的网络工具箱作者，专注实用、轻量、本地运行的工具，不收集任何用户数据。欢迎 Star 与反馈～
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <a style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);text-decoration:none;" onclick="window.open('https://github.com/${GITHUB_REPO}','_blank')">
+              <span style="font-size:18px;">⭐</span><span>GitHub：<b style="color:var(--primary);">${GITHUB_REPO}</b>（点我去 Star）</span>
+            </a>
+            <a style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);text-decoration:none;" onclick="copyText('huaizhi@nuaa.edu.cn')">
+              <span style="font-size:18px;">✉️</span><span>邮箱：huaizhi@nuaa.edu.cn（点击复制）</span>
+            </a>
           </div>
         </div>
 

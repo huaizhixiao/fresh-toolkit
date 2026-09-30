@@ -22,6 +22,7 @@ router.register('home', (container) => {
           ['traceroute', '🗺️', '线性-gradient(135deg,#fa709a,#fee140)', '路由追踪'],
           ['qrcode', '📱', '线性-gradient(135deg,#5ee7df,#b490ca)', '二维码'],
           ['ocr', '📷', '线性-gradient(135deg,#c471f5,#fa71cd)', '图片转文字'],
+          ['portcheck', '🔌', '线性-gradient(135deg,#f093fb,#f5576c)', '端口检测'],
           ['compass', '🧭', '线性-gradient(135deg,#ffecd2,#fcb69f)', '指南针']
         ].map(([page, icon, grad, name]) =>
           `<div class="tool-item" onclick="router.push('${page}')">
@@ -32,7 +33,7 @@ router.register('home', (container) => {
       </div>
     </div>
     <div style="text-align:center;padding:20px;color:#ccc;font-size:12px;">
-      小宝工具箱 v1.0.4 · Android版<br>
+      小宝工具箱 v1.0.5 · Android版<br>
       <span style="cursor:pointer;color:#07c160;font-size:12px;" onclick="router.push('about')">📋 关于 & 打赏</span>
     </div>
   `;
@@ -55,6 +56,7 @@ router.register('more', (container) => {
           ['traceroute', '🗺️', '线性-gradient(135deg,#fa709a,#fee140)', '路由追踪'],
           ['qrcode', '📱', '线性-gradient(135deg,#5ee7df,#b490ca)', '二维码'],
           ['ocr', '📷', '线性-gradient(135deg,#c471f5,#fa71cd)', '图片转文字'],
+          ['portcheck', '🔌', '线性-gradient(135deg,#f093fb,#f5576c)', '端口检测'],
           ['compass', '🧭', '线性-gradient(135deg,#ffecd2,#fcb69f)', '指南针']
         ].map(([page, icon, grad, name]) =>
           `<div class="tool-item" onclick="router.push('${page}')">
@@ -79,7 +81,7 @@ router.register('more', (container) => {
       </div>
 
       <div style="text-align:center;padding:16px;color:#ccc;font-size:12px;">
-        小宝工具箱 v1.0.4 · Android版
+        小宝工具箱 v1.0.5 · Android版
       </div>
     </div>
   `;

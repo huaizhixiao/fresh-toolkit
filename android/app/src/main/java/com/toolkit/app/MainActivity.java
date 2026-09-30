@@ -53,6 +53,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -100,6 +101,7 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new NativeTraceroute(), "NativeTraceroute");
         webView.addJavascriptInterface(new NativeGallery(), "NativeGallery");
         webView.addJavascriptInterface(new NativeScanner(), "NativeScanner");
+        webView.addJavascriptInterface(new NativePortCheck(), "NativePortCheck");
 
         webView.loadUrl("file:///android_asset/www/index.html");
     }
@@ -775,5 +777,120 @@ public class NativeScanner {
 
         @JavascriptInterface
         public boolean isScanning() { return scanning; }
+    }
+
+    // ===== 设备端口检测（TCP 端口连通性） =====
+    public class NativePortCheck {
+        private volatile boolean checking = false;
+        private ExecutorService threadPool = null;
+        private AtomicInteger scannedCount = null;
+        private AtomicInteger openCount = null;
+        private int totalTargets = 0;
+        private long startTime = 0;
+
+        private int[] parsePorts(String portsStr) {
+            if (portsStr == null || portsStr.trim().isEmpty()) return null;
+            java.util.ArrayList<Integer> list = new java.util.ArrayList<>();
+            String[] parts = portsStr.split(",");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                if (part.contains("-")) {
+                    String[] range = part.split("-");
+                    try {
+                        int s = Integer.parseInt(range[0].trim());
+                        int e = Integer.parseInt(range[1].trim());
+                        if (s > e) { int t = s; s = e; e = t; }
+                        if (e > 65535) e = 65535;
+                        for (int p = s; p <= e && list.size() < 65535; p++) list.add(p);
+                    } catch (Exception ignored) {}
+                } else {
+                    try { list.add(Integer.parseInt(part)); } catch (Exception ignored) {}
+                }
+            }
+            if (list.isEmpty()) return null;
+            int[] r = new int[list.size()];
+            for (int i = 0; i < list.size(); i++) r[i] = list.get(i);
+            return r;
+        }
+
+        @JavascriptInterface
+        public void checkPorts(final String host, final String portsStr, final int timeoutMs) {
+            if (checking) return;
+            final int[] ports = parsePorts(portsStr);
+            if (ports == null || ports.length == 0) {
+                mainHandler.post(() -> webView.evaluateJavascript(
+                    "window._portError('请填写有效的端口，如 80,443 或 1-1000')", null));
+                return;
+            }
+            checking = true;
+            scannedCount = new AtomicInteger(0);
+            openCount = new AtomicInteger(0);
+            totalTargets = ports.length;
+            startTime = System.currentTimeMillis();
+            mainHandler.post(() -> webView.evaluateJavascript("window._portStart(" + totalTargets + ")", null));
+
+            new Thread(() -> {
+                // 先解析主机名，避免每个端口重复 DNS
+                String resolvedIp = host;
+                try {
+                    java.net.InetAddress addr = java.net.InetAddress.getByName(host);
+                    resolvedIp = addr.getHostAddress();
+                } catch (Exception e) {
+                    mainHandler.post(() -> webView.evaluateJavascript(
+                        "window._portError('无法解析主机: " + escapeJS(host) + "')", null));
+                    checking = false;
+                    return;
+                }
+                final String fIp = resolvedIp;
+                int threads = Math.min(50, Math.max(8, ports.length));
+                threadPool = Executors.newFixedThreadPool(threads);
+                for (final int port : ports) {
+                    if (!checking) break;
+                    threadPool.submit(() -> {
+                        if (!checking) return;
+                        long st = System.currentTimeMillis();
+                        boolean open = false;
+                        try {
+                            java.net.Socket sock = new java.net.Socket();
+                            sock.connect(new java.net.InetSocketAddress(fIp, port), timeoutMs);
+                            sock.close();
+                            open = true;
+                        } catch (Exception ignored) {}
+                        int elapsed = (int) (System.currentTimeMillis() - st);
+                        if (open) openCount.incrementAndGet();
+                        scannedCount.incrementAndGet();
+                        if (!checking) return;
+                        final boolean fOpen = open;
+                        final int fElapsed = elapsed;
+                        mainHandler.post(() -> webView.evaluateJavascript(
+                            "window._portResult(" + port + "," + (fOpen ? "true" : "false") + "," + fElapsed + ")", null));
+                        int pct = (scannedCount.get() * 100) / totalTargets;
+                        final int fpct = pct;
+                        mainHandler.post(() -> webView.evaluateJavascript("window._portProgress(" + fpct + ")", null));
+                    });
+                }
+                threadPool.shutdown();
+                try { threadPool.awaitTermination(10, TimeUnit.MINUTES); } catch (Exception ignored) {}
+                threadPool = null;
+                if (!checking) {
+                    mainHandler.post(() -> webView.evaluateJavascript("window._portStopped()", null));
+                    return;
+                }
+                checking = false;
+                final int fOpen = openCount.get();
+                mainHandler.post(() -> webView.evaluateJavascript(
+                    "window._portDone(" + fOpen + "," + totalTargets + "," + (System.currentTimeMillis() - startTime) + ")", null));
+            }).start();
+        }
+
+        @JavascriptInterface
+        public void stopCheck() {
+            checking = false;
+            if (threadPool != null) { threadPool.shutdownNow(); threadPool = null; }
+        }
+
+        @JavascriptInterface
+        public boolean isChecking() { return checking; }
     }
 }
